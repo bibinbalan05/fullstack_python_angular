@@ -1,0 +1,404 @@
+<div class="flex flex-col gap-4">
+  <div class="flex items-center gap-4 bg-base-300 p-4 sticky top-0 z-30 shadow">
+    <input
+      type="text"
+      [(ngModel)]="searchTerm"
+      (ngModelChange)="onSearchInput()"
+      placeholder="Search products..."
+      class="input input-bordered w-full max-w-xs"
+    />
+
+    <div class="text-sm opacity-75 ml-2" *ngIf="!loading && totalProducts > 0">
+      {{ totalProducts }} result(s)
+      <span *ngIf="totalPages > 1"> on {{ totalPages }} pages</span>
+    </div>
+    <div
+      class="text-sm opacity-75 ml-2"
+      *ngIf="!loading && totalProducts === 0"
+    >
+      No results found
+    </div>
+
+    <div class="flex-grow"></div>
+
+    <button
+      onclick="create_product_modal.showModal()"
+      class="btn btn-circle btn-primary"
+      title="Add Products"
+    >
+      +
+    </button>
+
+    <dialog id="create_product_modal" class="modal">
+      <div class="modal-box">
+        <form method="dialog">
+          <button
+            class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+          >
+            ✕
+          </button>
+        </form>
+        <h3 class="text-lg font-bold">Create new product(s)</h3>
+        <div class="flex w-full flex-col gap-4 py-4">
+          <div
+            class="card bg-base-300 rounded-box grid h-20 place-items-center"
+          >
+            <button class="link link-hover" (click)="redirectToAddManually()">
+              Create manually
+            </button>
+          </div>
+          <div class="divider">OR</div>
+          <app-file-upload></app-file-upload>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+  </div>
+
+  <div class="flex items-center p-4 gap-4">
+    <div class="join">
+      <button
+        class="btn join-item"
+        (click)="markAllVisible()"
+        [disabled]="products.length === 0 || loading"
+        title="Select all products on this page"
+      >
+        Mark All Visible
+      </button>
+      <button
+        class="btn join-item"
+        (click)="clearSelection()"
+        [disabled]="selectedProducts.length === 0"
+        title="Deselect all products"
+      >
+        Clear Selection ({{ selectedProducts.length }})
+      </button>
+      <button
+        class="btn join-item btn-success"
+        (click)="onAddClick()"
+        title="Add selected products to My Products"
+        [disabled]="!canAddSelection || isMixedSelection || loading"
+      >
+        Add Selection
+      </button>
+      <button
+        class="btn join-item btn-warning"
+        (click)="onRemoveClick()"
+        title="Remove selected products from My Products"
+        [disabled]="!canRemoveSelection || isMixedSelection || loading"
+      >
+        Remove Selection
+      </button>
+    </div>
+
+    <div class="ml-auto flex items-center join">
+      <button
+        class="btn join-item"
+        (click)="toggleListView()"
+        [ngClass]="{ 'btn-active btn-primary': !listView }"
+        title="Grid View"
+      >
+        <ng-icon name="matGridViewRound" size="18"></ng-icon>
+      </button>
+      <button
+        class="btn join-item"
+        (click)="toggleListView()"
+        [ngClass]="{ 'btn-active btn-primary': listView }"
+        title="List View"
+      >
+        <ng-icon name="matFormatListBulletedRound" size="18"></ng-icon>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="p-4">
+    <div class="alert alert-error shadow-lg">
+      <div>
+        <ng-icon name="matErrorRound" size="18"></ng-icon>
+        <span>{{ error }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="p-4">
+    <div
+      *ngIf="!listView"
+      class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+    >
+      <div
+        class="skeleton h-64"
+        *ngFor="
+          let i of [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+            20,
+          ]
+        "
+      ></div>
+    </div>
+    <div *ngIf="listView" class="flex flex-col gap-4">
+      <div
+        class="skeleton h-36"
+        *ngFor="
+          let i of [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+            20,
+          ]
+        "
+      ></div>
+    </div>
+  </div>
+  <div
+    *ngIf="!listView && !loading && products.length > 0"
+    class="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 rounded"
+  >
+    <div
+      class="card bg-base-200 relative shadow-md hover:shadow-lg transition-shadow duration-200 ease-in-out flex flex-col"
+      *ngFor="let product of products"
+      (click)="editProduct(product.id)"
+      [ngClass]="{
+        ' outline outline-2 outline-primary outline-offset-2':
+          product.isClicked,
+        ' opacity-50 cursor-not-allowed': isProductDimmed(product),
+      }"
+    >
+      <input
+        type="checkbox"
+        class="checkbox checkbox-primary absolute left-3 top-3 z-2"
+        [checked]="product.isClicked"
+        (change)="chooseProduct(product)"
+        (click)="$event.stopPropagation()"
+        [disabled]="isProductDimmed(product)"
+      />
+      <figure class="px-4 pt-10 h-40">
+        <img
+          [src]="product.image || 'assets/placeholder.png'"
+          alt="Image {{ product.name }}"
+          loading="lazy"
+          class="h-full w-auto object-contain object-center"
+        />
+      </figure>
+      <div class="card-body p-4 flex-grow">
+        <div class="flex items-center justify-start gap-2">
+          <p
+            class="text-xs text-primary truncate"
+            title="{{ product.productCategory.name }}"
+          >
+            {{ product.productCategory.name }}
+          </p>
+
+          <ng-container *ngIf="product.isAnswered">
+            <product-score
+              [attr.ean]="
+                product.eans && product.eans.length > 0
+                  ? product.eans[0].ean
+                  : ''
+              "
+              [attr.api-base-url]="baseUrl"
+            ></product-score>
+          </ng-container>
+        </div>
+        <h2
+          class="card-title text-sm mt-3 leading-tight line-clamp-2 w-full"
+          title="{{ product.productLine.brand.name }} {{
+            product.productLine.name
+          }} {{ product.name }}"
+        >
+          <span class="font-bold">
+            {{ product.productLine.brand.name }}
+          </span>
+          <span class="font-normal"
+            >{{ product.productLine.name }} {{ product.name }}</span
+          >
+        </h2>
+      </div>
+      <div
+        class="badge badge-primary badge-sm absolute right-3 top-3 z-2"
+        *ngIf="product.is_my_product"
+      >
+        My Product
+      </div>
+    </div>
+  </div>
+
+  <div
+    *ngIf="listView && !loading && products.length > 0"
+    class="flex flex-col gap-4 p-4 rounded"
+  >
+    <div
+      class="card card-side bg-base-200 relative shadow-md hover:shadow-lg transition-shadow duration-200 ease-in-out"
+      *ngFor="let product of products"
+      (click)="editProduct(product.id)"
+      [ngClass]="{
+        ' outline outline-2 outline-primary outline-offset-2':
+          product.isClicked,
+        ' opacity-50 cursor-not-allowed': isProductDimmed(product),
+      }"
+    >
+      <figure class="p-4 w-32 md:w-40 flex-shrink-0">
+        <img
+          [src]="product.image || 'assets/placeholder.png'"
+          alt="Image {{ product.name }}"
+          loading="lazy"
+          class="h-full w-auto object-contain object-center"
+        />
+      </figure>
+      <div class="card-body p-4">
+        <div class="flex items-center justify-start gap-2 mb-1">
+          <p
+            class="text-xs text-primary truncate"
+            title="{{ product.productCategory.name }}"
+          >
+            {{ product.productCategory.name }}
+          </p>
+        </div>
+        <h2
+          class="card-title text-sm leading-tight mb-2"
+          title="{{ product.productLine.brand.name }} {{
+            product.productLine.name
+          }} {{ product.name }}"
+        >
+          <span class="font-bold">
+            {{ product.productLine.brand.name }}
+          </span>
+          <span class="font-normal"
+            >{{ product.productLine.name }} {{ product.name }}</span
+          >
+        </h2>
+        <div
+          class="text-xs grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-3 gap-y-1"
+        >
+          <div
+            *ngFor="let aspectScore of product.aspectScores"
+            class="flex items-center gap-1"
+          >
+            <ng-container *ngIf="product.isAnswered">
+              <div
+                class="badge rounded-full text-black text-xs min-w-14"
+                [ngStyle]="{
+                  'background-color': getScoreColor(aspectScore.value),
+                }"
+              >
+                {{ aspectScore.value | number: "1.0-1" }}
+              </div>
+            </ng-container>
+            <span
+              class="opacity-75 truncate"
+              title="{{ aspectScore.aspect_name }}"
+              >{{ aspectScore.aspect_name }}</span
+            >
+          </div>
+          <div
+            *ngIf="!product.aspectScores || product.aspectScores.length === 0"
+            class="text-xs opacity-50"
+          >
+            No aspect scores.
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 absolute right-3 top-3 z-2">
+        <div
+          class="badge badge-warning badge-sm flex items-center gap-1"
+          *ngIf="product.concernCount > 0"
+          title="Concerns raised"
+        >
+          <ng-icon name="matErrorRound" size="14"></ng-icon>
+          {{ product.concernCount }}
+        </div>
+        <div class="badge badge-primary badge-sm" *ngIf="product.is_my_product">
+          My Product
+        </div>
+        <ng-container *ngIf="product.isAnswered">
+          <div
+            class="badge badge-outline rounded-full ml-auto"
+            [ngStyle]="{
+              'background-color': getScoreColor(product.overallScore),
+              color: product.overallScore < 4 ? 'white' : 'black',
+            }"
+          >
+            {{ product.overallScore | number: "1.0-1" }}
+          </div>
+        </ng-container>
+        <input
+          type="checkbox"
+          class="checkbox checkbox-primary"
+          [checked]="product.isClicked"
+          (change)="chooseProduct(product)"
+          (click)="$event.stopPropagation()"
+          [disabled]="isProductDimmed(product)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div
+    *ngIf="!loading && products.length === 0 && !error"
+    class="text-center p-8 text-lg opacity-75"
+  >
+    {{
+      searchTerm || (hasActiveFilters$ | async)
+        ? "No products match your criteria."
+        : "No products available."
+    }}
+  </div>
+
+  <div
+    *ngIf="!loading && totalPages > 1"
+    class="flex justify-center items-center p-4"
+  >
+    <div class="join">
+      <button
+        class="btn join-item"
+        (click)="goToPage(1)"
+        [disabled]="currentPage === 1"
+        title="First Page"
+      >
+        ««
+      </button>
+      <button
+        class="btn join-item"
+        (click)="goToPage(currentPage - 1)"
+        [disabled]="currentPage === 1"
+        title="Previous Page"
+      >
+        «
+      </button>
+
+      <ng-container *ngFor="let pageNum of getPaginationRange()">
+        <button
+          *ngIf="pageNum !== '...'"
+          class="btn join-item"
+          [class.btn-active]="pageNum === currentPage"
+          [class.btn-disabled]="pageNum === currentPage"
+          (click)="goToPage(+pageNum)"
+        >
+          {{ pageNum }}
+        </button>
+        <button
+          *ngIf="pageNum === '...'"
+          class="btn join-item btn-disabled px-1 md:px-4"
+        >
+          ...
+        </button>
+      </ng-container>
+
+      <button
+        class="btn join-item"
+        (click)="goToPage(currentPage + 1)"
+        [disabled]="currentPage === totalPages"
+        title="Next Page"
+      >
+        »
+      </button>
+      <button
+        class="btn join-item"
+        (click)="goToPage(totalPages)"
+        [disabled]="currentPage === totalPages"
+        title="Last Page"
+      >
+        »»
+      </button>
+    </div>
+  </div>
+</div>

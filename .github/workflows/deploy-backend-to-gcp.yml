@@ -1,0 +1,83 @@
+name: Deploy Backend to GCP Cloud Run
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    # Only run on push to master or manually
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Google Auth
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+      
+      - name: Docker Auth
+        id: docker-auth
+        uses: 'docker/login-action@v3'
+        with:
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.access_token }}'
+          registry: 'europe-west1-docker.pkg.dev'
+      
+      - name: Build, tag and push container
+        id: build-image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./back_end
+          push: true
+          tags: |
+            europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/archr-backend/archr-backend:${{ github.sha }}
+            europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/archr-backend/archr-backend:latest
+            
+      - name: Run Database Migrations
+        id: migrate
+        run: |
+          echo "🔄 Running database migrations..."
+          
+          # Deploy (create or update) and execute migration job
+          gcloud run jobs deploy django-migrate \
+            --image=europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/archr-backend/archr-backend:${{ github.sha }} \
+            --region=europe-west1 \
+            --set-env-vars="GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }},DB_NAME=${{ secrets.DB_NAME }},DB_USER=${{ secrets.DB_USER }},DB_PASSWORD=${{ secrets.DB_PASSWORD }},SECRET_KEY=${{ secrets.SECRET_KEY }},GCP_VERTEX_AI_API_KEY=${{ secrets.GCP_VERTEX_AI_API_KEY }}" \
+            --set-cloudsql-instances=portal-score:europe-west1:archr-mysql \
+            --args="python,manage.py,migrate,--verbosity=2" \
+            --max-retries=1 \
+            --execute-now
+          
+          echo "✅ Database migrations completed successfully"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: archr-backend
+          region: europe-west1
+          image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/archr-backend/archr-backend:${{ github.sha }}
+          env_vars: |
+            GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            GS_BUCKET_NAME=${{ secrets.GS_BUCKET_NAME }}
+            GCP_VERTEX_AI_API_KEY=${{ secrets.GCP_VERTEX_AI_API_KEY }}
+      
+      - name: Show Output
+        run: echo ${{ steps.deploy.outputs.url }}

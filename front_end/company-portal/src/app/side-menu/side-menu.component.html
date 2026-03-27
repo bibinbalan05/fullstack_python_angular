@@ -1,0 +1,133 @@
+<nav
+  class="w-72 relative h-screen overflow-y-auto overflow-x-hidden transition-all duration-500 flex flex-col bg-base-200"
+  [ngClass]="{
+    'max-w-full': isMenuVisible,
+    'max-w-10': !isMenuVisible,
+    'overflow-hidden': !isMenuVisible,
+  }">
+  <div class="flex justify-end">
+    <button class="btn btn-ghost btn-circle z-50" (click)="toggleMenu()">
+      <ng-container *ngIf="isMenuVisible; else hiddenIcon">
+        <ng-icon name="matKeyboardDoubleArrowLeftRound" size="24"></ng-icon>
+      </ng-container>
+      <ng-template #hiddenIcon>
+        <ng-icon name="matKeyboardDoubleArrowRightRound" size="24"></ng-icon>
+      </ng-template>
+    </button>
+  </div>
+  <ul class="menu w-full grow flex-nowrap" [ngClass]="{ 'p-0': !isMenuVisible }">
+    <li>
+      <a routerLink="/">
+        <ng-icon name="matHomeRound" size="18"></ng-icon>
+        <span *ngIf="isMenuVisible">Home</span>
+      </a>
+    </li>
+    <li *ngIf="currentUrl === '/' || currentUrl.startsWith('/?')">
+      <a (click)="toggleFilterSection()">
+        <ng-icon name="matFilterAltRound" size="18"></ng-icon>
+        <span *ngIf="isMenuVisible" class="whitespace-nowrap">Filter & Sort</span>
+        <span class="badge badge-primary badge-sm" *ngIf="totalSelectedValuesLength > 0">
+          {{ totalSelectedValuesLength }}
+        </span>
+      </a>
+
+      <ul *ngIf="isFilterExpanded && isMenuVisible" class="menu w-full grow flex-nowrap">
+
+        <li>
+          <a (click)="clearAllFilters()"
+            class="text-error hover:bg-error hover:text-error-content flex items-center gap-2 cursor-pointer py-1 px-4">
+            <ng-icon name="matClearRound" size="16"></ng-icon>
+            <span>Clear All Filters</span>
+          </a>
+        </li>
+
+        <li *ngFor="let filter of filters">
+          <a (click)="toggleFilter(filter)">
+            <span>{{ filter.name }}</span>
+            <div class="badge badge-primary badge-sm" *ngIf="(lengths[filter.name] || 0) > 0">
+              {{ lengths[filter.name] }}
+            </div>
+          </a>
+          <ul *ngIf="filter.isExpanded && filter.name !== SCORE_FILTER_NAME">
+            <li *ngFor="let value of getFilteredOptions(filter)">
+              <label class="label cursor-pointer py-1 px-4 justify-start gap-3" [title]="value.name">
+                <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                  [checked]="isValueSelected(filter.name, value)" (change)="selectFilterValue(filter.name, value)" />
+                <span class="label-text max-w-40 overflow-hidden text-ellipsis">{{ value.name }}</span>
+              </label>
+            </li>
+            <li
+              *ngIf="filter.name === PRODUCT_LINE_FILTER_NAME && getFilteredOptions(filter).length === 0 && (selectedValues[BRAND_FILTER_NAME]?.length ?? 0) > 0">
+              <span class="menu-title px-4 py-2 text-xs italic opacity-50">No lines match selected brand(s)</span>
+            </li>
+            <li
+              *ngIf="filter.name === PRODUCT_LINE_FILTER_NAME && getFilteredOptions(filter).length === 0 && (selectedValues[BRAND_FILTER_NAME]?.length ?? 0) === 0 && (!filter.values || filter.values.length === 0)">
+              <span class="menu-title px-4 py-2 text-xs italic opacity-50">No product lines available</span>
+            </li>
+          </ul>
+          <div *ngIf="filter.isExpanded && filter.name === SCORE_FILTER_NAME" class="py-2 flex flex-col gap-4  w-full">
+             <div class="flex flex-col gap-1 w-full">
+              <div class="flex justify-between items-center text-sm">
+                 <span>Min</span>
+                 <span class="font-semibold">{{scoreMinValue | number:'1.1-1'}}</span>
+              </div>
+              <input type="range"
+                  [min]="minScoreValue"
+                  [max]="maxScoreValue"
+                  step="0.1"
+                  class="range range-xs range-primary"
+                  name="minScoreValue"
+                  [(ngModel)]="scoreMinValue"
+                  (input)="updateSelectedScoreValues()" /> <div class="flex justify-between text-xs px-1">
+                   <span *ngFor="let tick of scoreFilterTicks">{{ tick % 2 == 0 ? tick : ''}}</span>
+               </div>
+            </div>
+             <div class="flex flex-col gap-1  w-full">
+              <div class="flex justify-between items-center text-sm">
+                  <span>Max</span>
+                  <span class="font-semibold">{{scoreMaxValue | number:'1.1-1'}}</span>
+              </div>
+               <input type="range"
+                  [min]="minScoreValue"
+                  [max]="maxScoreValue"
+                  step="0.1"
+                  class="range range-xs range-primary"
+                  name="maxScoreValue"
+                  [(ngModel)]="scoreMaxValue"
+                  (input)="updateSelectedScoreValues()" /> <div class="flex justify-between text-xs px-1">
+                   <span *ngFor="let tick of scoreFilterTicks">{{ tick % 2 == 0 ? tick : '' }}</span>
+               </div>
+             </div>
+          </div>
+        </li>
+
+        <li *ngIf="filters.length === 0">
+          <span class="menu-title px-4 py-2 text-xs italic opacity-50">Loading filters...</span>
+        </li>
+      </ul>
+    </li>
+    <li class="mt-auto">
+      <a onclick="user_modal.showModal()" *ngIf="currentUser">
+        <ng-icon name="matAccountCircleRound" size="18"></ng-icon>
+        <span *ngIf="isMenuVisible">{{currentUser.user.username}}</span>
+      </a>
+    </li>
+  </ul>
+
+  <dialog #user_modal id="user_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">User Account</h3>
+      <p class="py-4" *ngIf="currentUser">Username: {{ currentUser.user.username }}</p>
+      <p class="py-4" *ngIf="currentUser">Email: {{ currentUser.user.email }}</p>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+        </form>
+        <button class="btn btn-primary" (click)="onLogout(); user_modal.close()">Logout</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+</nav>

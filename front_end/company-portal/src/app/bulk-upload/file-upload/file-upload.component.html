@@ -1,0 +1,51 @@
+<div class="flex flex-col items-center space-y-4">
+  <label for="file_input" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+    Upload file
+  </label>
+
+  <div class="relative w-full">
+    <input 
+      type="file" 
+      id="file-upload" 
+      class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+      accept=".csv"
+      (change)="onFileSelected($event)"
+    >
+    
+    <div class="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+      <span class="text-sm text-gray-500 dark:text-gray-300">Choose a file...</span>
+      <span class="px-3 py-1 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition">
+        Browse
+      </span>
+    </div>
+  </div>
+
+  <div *ngIf="fileName" class="text-sm text-green-600 font-medium mb-2">
+    Selected File: {{ fileName }}
+  </div>
+
+  <div *ngIf="error" class="text-sm text-red-600 font-semibold mb-2">
+    {{ error }}
+  </div>
+
+  <button
+    *ngIf="isBulkUploadEnabled"
+    (click)="onUpload()"
+    class="cursor-pointer inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-200 ease-in-out">
+    Bulk Upload
+  </button>
+  <p class="text-gray-500 text-sm text-center max-w-md mx-auto">
+    Upload a <strong>CSV file</strong> with headers:<br />
+    <span class="italic">
+      EAN, Name, ProductCategory, ProductLine, Brand,ImageURL
+    </span>
+  </p>
+
+  <div class="text-center mt-3">
+    <a href="products.csv" download="products.csv">
+      <button class="px-4 py-1.5 text-xs bg-green-500 text-white rounded-full shadow hover:bg-green-600">
+        Download Template
+      </button>
+    </a>
+  </div>
+</div>

@@ -1,0 +1,19 @@
+<div class="flex flex-col gap-4 w-full p-4">
+  <app-product-form
+    title="Edit Product"
+    submitButtonText="Save"
+    [productId]="productId"
+    (formSubmit)="onSubmit()"
+  >
+  </app-product-form>
+
+  <div *ngIf="showQuestionnaireSections">
+    <app-questionnaire-sections
+      [brandId]="brandID!"
+      [productId]="productID!"
+      [productLineId]="productLineID!"
+      [productCategory]="{ name: productCategoryID! }"
+    >
+    </app-questionnaire-sections>
+  </div>
+</div>

@@ -1,0 +1,25 @@
+<div
+    class="flex flex-col justify-center items-center min-h-screen bg-gradient-to-br from-base-200 to-base-300 text-center p-6">
+    <h1 class="text-9xl font-extrabold text-primary mb-4 animate-pulse">
+        404
+    </h1>
+    <h2 class="text-4xl font-bold text-base-content mb-3">
+        Page Not Found
+    </h2>
+    <p class="text-lg text-base-content/70 mb-8 max-w-md mx-auto">
+        Sorry, we couldn't find the page you were looking for. It might have been moved, deleted, or maybe you just
+        mistyped the URL.
+    </p>
+    <div class="mb-8 text-neutral/40"> <ng-icon name="matHelpOutlineRound" size="80"></ng-icon>
+    </div>
+    <div class="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+        <button (click)="goBack()" class="btn btn-ghost">
+            <ng-icon name="matArrowBackRound" size="20" class="mr-2"></ng-icon>
+            Go Back
+        </button>
+        <a routerLink="/" class="btn btn-primary">
+            <ng-icon name="matHomeRound" size="20" class="mr-2"></ng-icon>
+            Go to Homepage
+        </a>
+    </div>
+</div>

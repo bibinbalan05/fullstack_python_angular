@@ -1,0 +1,203 @@
+<form
+  class="flex flex-col w-full max-w-6xl mx-auto p-2"
+  (ngSubmit)="onSubmit($event)"
+>
+  <h1 class="text-2xl mb-2">{{ title }}</h1>
+  <fieldset
+    class="fieldset bg-base-200 border border-base-300 p-2 rounded-box w-full"
+  >
+    <legend class="fieldset-legend">Product Details</legend>
+
+    <!-- First Row - Basic Info -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-2">
+      <div>
+        <label class="fieldset-label">Product name</label>
+        <input
+          type="text"
+          class="input w-full"
+          placeholder="Product name"
+          [value]="formData.productName"
+          (input)="onProductNameChange($event)"
+          name="productName"
+        />
+      </div>
+
+      <div>
+        <label class="fieldset-label"
+          >Product category: {{ formData.productCategoryID }}</label
+        >
+        <div class="input" *ngIf="state.isLoading">
+          <div class="loading"></div>
+        </div>
+        <select
+          class="select w-full"
+          name="productCategory"
+          #selectedProductCategory
+          (change)="
+            onSelectProductCategory(
+              state.productCategories[selectedProductCategory.selectedIndex]
+                .name
+            )
+          "
+          *ngIf="!state.isLoading"
+        >
+          <option
+            [ngValue]="productCategory.name"
+            *ngFor="let productCategory of state.productCategories"
+            [selected]="productCategory.name === formData.productCategoryID"
+          >
+            {{ productCategory.name }}
+          </option>
+        </select>
+      </div>
+
+            <div>
+                <label class="fieldset-label">Product Image</label>
+                <div class="flex gap-2 items-start">
+                    <input 
+                        type="url" 
+                        class="input flex-1" 
+                        placeholder="https://example.com/image.jpg"
+                        [value]="formData.image"
+                        (input)="onImageChange($event)"
+                        name="image"
+                        hidden>
+                    <button type="button" class="btn btn-outline" (click)="showImageSelector = true">
+                        {{ formData.image ? 'Change image' : 'Add image' }}
+                    </button>
+                    <div *ngIf="formData.image" class="ml-2">
+                        <img [src]="formData.image" alt="preview" class="w-16 h-16 object-cover rounded border" />
+                    </div>
+                </div>
+
+                <!-- Image selector modal -->
+                <div class="modal" [class.modal-open]="showImageSelector">
+                    <div class="modal-box w-11/12 max-w-4xl p-0">
+                        <app-image-selector (select)="onImageSelected($event)"></app-image-selector>
+                    </div>
+                    <div class="modal-backdrop" (click)="showImageSelector = false">
+                        <button>close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- Second Row - Brand & Product Line -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+      <div>
+        <label class="fieldset-label">Brand: {{ formData.brandID }}</label>
+        <div class="input" *ngIf="state.isLoading">
+          <div class="loading"></div>
+        </div>
+        <select
+          class="select w-full"
+          name="selectedBrand"
+          #selectedBrand
+          (change)="onSelectBrand(state.brands[selectedBrand.selectedIndex].id)"
+          *ngIf="!state.isLoading"
+        >
+          <option
+            [ngValue]="brand.id"
+            *ngFor="let brand of state.brands"
+            [selected]="brand.id === formData.brandID"
+          >
+            {{ brand.name }}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="fieldset-label"
+          >Product Line: {{ formData.productLineID }}</label
+        >
+        <div class="input" *ngIf="state.isLoading">
+          <div class="loading"></div>
+        </div>
+        <select
+          class="select w-full"
+          #selectedProductLine
+          (change)="
+            onSelectProductLine(
+              state.filteredProductLines[selectedProductLine.selectedIndex].id
+            )
+          "
+          *ngIf="!state.isLoading"
+        >
+          <option
+            [ngValue]="productLine.id"
+            *ngFor="let productLine of state.filteredProductLines"
+            [selected]="productLine.id === formData.productLineID"
+          >
+            {{ productLine.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <!-- EAN Numbers Section - Full Width -->
+    <div class="mb-2">
+      <label class="fieldset-label">EAN Numbers</label>
+      <div class="space-y-1">
+        <div
+          *ngFor="let eanItem of formData.eans; let i = index"
+          class="ean-item flex gap-2 items-center"
+        >
+          <input
+            type="text"
+            class="input flex-1"
+            placeholder="EAN number"
+            [value]="eanItem.ean"
+            (input)="onEanChange(i, 'ean', $event)"
+            [name]="'ean_' + i"
+          />
+          <input
+            type="text"
+            class="input flex-1"
+            placeholder="Description (optional)"
+            [value]="eanItem.name || ''"
+            (input)="onEanChange(i, 'name', $event)"
+            [name]="'ean_name_' + i"
+          />
+          <button
+            type="button"
+            class="btn btn-outline btn-error btn-sm"
+            (click)="removeEan(i)"
+            [disabled]="formData.eans.length <= 1"
+          >
+            Remove
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="btn btn-outline btn-primary btn-sm"
+            (click)="addEan()"
+          >
+            Add EAN
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [ngClass]="{
+              'btn-success': (isProductAnswered$ | async),
+              'btn-danger': !(isProductAnswered$ | async)
+            }"
+            (click)="toggleProductAnswered()"
+          >
+            Is Answered
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-error" *ngIf="state.errorMessage">
+      <ng-icon name="matErrorRound" size="18"></ng-icon>
+      {{ state.errorMessage }}
+    </div>
+
+    <button class="btn btn-primary" [disabled]="state.isLoading">
+      <span *ngIf="!state.isLoading">{{ submitButtonText }}</span>
+      <div *ngIf="state.isLoading" class="loading"></div>
+    </button>
+  </fieldset>
+</form>

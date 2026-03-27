@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* --- DaisyUI Plugin Configuration --- */
+@plugin "daisyui" {
+  themes: light --default;
+}
+
+/* This block targets the 'light' theme specifically and overrides
+   its default color variables. Any variables not specified here
+   will retain their original 'light' theme values. */
+@plugin "daisyui/theme" {
+  name: "light";        /* Target the 'light' theme */
+  default: true;       /* Confirm it's the default */
+  color-scheme: light; /* Keep browser UI light */
+
+  /* Base Colors - Standard light theme values often work well */
+  --color-base-100: #ffffff;    /* White background */
+  --color-base-200: #f9fafb;    /* Very light gray (for subtle contrast) */
+  --color-base-300: #f0f0f0;    /* Light gray (for borders, dividers, hover bg) */
+  --color-base-content: #1f2937; /* Dark Gray/Black text */
+
+  /* Primary Action Colors - Using the green from archr.se */
+  --color-primary: #4CAF50;     /* Medium Green */
+  --color-primary-content: #ffffff; /* White text on primary */
+
+  /* Secondary Action Colors - Using a lighter green */
+  --color-secondary: #81c784;   /* Lighter Green */
+  --color-secondary-content: #1f2937; /* Dark text on secondary */
+
+  /* Accent Colors - Reusing primary green as accent */
+  --color-accent: #4CAF50;      /* Medium Green */
+  --color-accent-content: #ffffff;  /* White text on accent */
+
+  /* Neutral Colors - Standard grays */
+  --color-neutral: #d1d5db;     /* Neutral Gray */
+  --color-neutral-content: #4b5563; /* Darker gray text on neutral */
+
+  /* Status Colors (Adjust as needed) */
+  --color-info: #3b82f6;        /* Standard Blue */
+  --color-info-content: #ffffff;
+  --color-success: #4CAF50;     /* Use primary green for success */
+  --color-success-content: #ffffff;
+  --color-warning: #f59e0b;     /* Standard Amber/Orange */
+  --color-warning-content: #1f2937; /* Dark text for contrast */
+  --color-error: #ef4444;       /* Standard Red */
+  --color-error-content: #ffffff;
+
+  /* Optional: You can override radius, etc. here too if desired */
+  /* --radius-btn: 0.5rem; */
+}

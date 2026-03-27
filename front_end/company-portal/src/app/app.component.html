@@ -1,0 +1,9 @@
+<div class="w-full flex h-screen">
+  <ngx-loading-bar></ngx-loading-bar>
+  <!-- Side Menu -->
+  <app-side-menu *ngIf="showSideMenu"></app-side-menu>
+  <div class="flex flex-col grow w-full h-screen overflow-auto">
+    <!-- Main Content -->
+    <router-outlet></router-outlet>
+  </div>
+</div>

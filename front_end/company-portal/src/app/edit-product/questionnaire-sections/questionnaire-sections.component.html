@@ -1,0 +1,563 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="alert alert-error" *ngIf="errorMessage">
+    <ng-icon name="matErrorRound" size="18"></ng-icon>
+    {{ errorMessage }}
+    <button
+      class="btn btn-ghost btn-sm btn-circle btn-error ml-auto"
+      (click)="clearError()"
+    >
+      <ng-icon name="matCloseRound" size="18"></ng-icon>
+    </button>
+  </div>
+  <div class="mb-8 p-4 bg-base-200 rounded-lg shadow">
+    <div role="tablist" class="tabs tabs-box bg-base-100 mb-4">
+      <a
+        role="tab"
+        class="tab tab-lg grow"
+        (click)="handleClick('brand')"
+        [ngClass]="{
+          'tab-active !bg-primary text-primary-content font-semibold':
+            brandIsActive,
+        }"
+      >
+        Brand
+      </a>
+      <a
+        role="tab"
+        class="tab tab-lg grow"
+        (click)="handleClick('productLine')"
+        [ngClass]="{
+          'tab-active !bg-primary text-primary-content font-semibold':
+            productLineIsActive,
+        }"
+      >
+        Product line
+      </a>
+      <a
+        role="tab"
+        class="tab tab-lg grow"
+        (click)="handleClick('product')"
+        [ngClass]="{
+          'tab-active !bg-primary text-primary-content font-semibold':
+            productIsActive,
+        }"
+      >
+        Model
+      </a>
+    </div>
+
+    <div
+      role="tablist"
+      class="tabs tabs-box bg-base-100"
+      *ngIf="getActiveQuestionnaires.length > 0"
+    >
+      <a
+        role="tab"
+        *ngFor="let questionnair of getActiveQuestionnaires"
+        class="tab tab-lg grow"
+        (click)="handleSelection(questionnair.aspect)"
+        [ngClass]="{
+          'tab-active !bg-secondary text-secondary-content font-semibold':
+            aspectName == questionnair.aspect,
+        }"
+      >
+        {{ questionnair.aspect }}
+      </a>
+    </div>
+  </div>
+
+  <div
+    class="mb-6 p-4 bg-base-200 text-black rounded-xl shadow flex items-center items-start justify-between"
+  >
+    <div class="flex-1">
+      <h2 class="text-2xl font-black mb-2 border-b border-base-300 pb-2">
+        AI answer generation for questionnaire
+      </h2>
+      <p class="text-sm opacity-80 mb-4">
+        Please
+        <span class="font-semibold">upload</span>
+        the sustainability report
+      </p>
+      <br />
+      <div class="upload-container flex items-center gap-4 mt-4">
+        <input
+          type="file"
+          accept="application/pdf"
+          multiple
+          (change)="onFileSelected($event)"
+          class="file-input file-input-bordered file-input-success w-full max-w-xs"
+        />
+        <button
+          (click)="onUpload()"
+          class="btn btn-success"
+          [disabled]="selectedFiles.length === 0 || uploadingFile"
+        >
+          <span
+            *ngIf="uploadingFile"
+            class="loading loading-spinner loading-sm"
+          ></span>
+          {{ uploadingFile ? "Processing..." : "Upload (" + selectedFiles.length + ")" }}
+        </button>
+      </div>
+      <div *ngIf="selectedFiles.length > 0" class="mt-2 text-green-700 font-medium">
+        Selected File(s):
+        <ul class="list-disc pl-5">
+           <li *ngFor="let file of selectedFiles">{{ file.name }}</li>
+        </ul>
+      </div>
+    </div>
+    <div class="ml-4 flex-shrink-0">
+      <ng-icon
+        name="matAutoAwesomeRound"
+        size="40"
+        class="text-black"
+      ></ng-icon>
+    </div>
+  </div>
+
+  <!-- Prefill from another model section -->
+  <div
+    *ngIf="productIsActive"
+    class="mb-6 p-4 bg-base-200 rounded-xl shadow flex items-center justify-between"
+  >
+    <div class="flex items-center">
+      <ng-icon name="matFileCopyOutline" size="24" class="mr-4 text-info"></ng-icon>
+      <p class="text-sm opacity-80">
+        Copy answers from another model in this product line.
+      </p>
+    </div>
+    <button
+      (click)="openPrefillModal()"
+      class="btn btn-info btn-sm ml-4 whitespace-nowrap"
+      [disabled]="isCopyingAnswers"
+    >
+      <span
+        *ngIf="isCopyingAnswers"
+        class="loading loading-spinner loading-sm"
+      ></span>
+      {{ isCopyingAnswers ? "Copying..." : "Prefill from another model" }}
+    </button>
+  </div>
+
+  <div *ngIf="isLoading" class="flex justify-center items-center min-h-[200px]">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+  </div>
+
+  <div *ngIf="!isLoading">
+    <div
+      *ngIf="getActiveFilteredQuestionnaires.length === 0"
+      class="flex justify-center items-center min-h-[200px] text-center"
+    >
+      <div class="alert alert-warning shadow-lg max-w-md">
+        <ng-icon name="matErrorRound" size="18" class="shrink-0"></ng-icon>
+        <span>No questions found for the selected options.</span>
+      </div>
+    </div>
+
+    <div
+      *ngFor="let questionnair of getActiveFilteredQuestionnaires"
+      class="card bg-base-100 shadow-xl mb-8 border border-base-300"
+    >
+      <div class="card-body">
+        <h3 class="card-title text-2xl mb-6 border-b border-base-300 pb-3">
+          {{ questionnair.aspect }}
+        </h3>
+
+        <div
+          *ngFor="let question of questionnair.questions"
+          class="mb-8 last:mb-0"
+        >
+          <div
+            class="flex items-start mb-4 justify-between"
+            [ngClass]="{
+              'bg-yellow-50 border-l-4 border-yellow-500 pl-3 -ml-3 py-2':
+                hasConcern(question) && isArchrUser(),
+            }"
+          >
+            <div class="flex-grow">
+              <div class="flex items-start justify-between flex-grow">
+                <p class="text-lg font-semibold text-base-content mr-2">
+                  {{ question.questionText }}
+                </p>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <!-- Tooltip for question purpose -->
+                <div
+                  *ngIf="question.purpose"
+                  class="tooltip tooltip-left"
+                  [attr.data-tip]="question.purpose"
+                >
+                  <ng-icon
+                    name="matInfoOutline"
+                    size="18"
+                    class="text-light-gray cursor-pointer"
+                  ></ng-icon>
+                </div>
+
+                <!-- Single/Multiple choice badges -->
+                <span
+                  *ngIf="question.isSingleChoice"
+                  class="badge badge-info text-xs"
+                  title="Single choice"
+                >
+                  Single choice
+                </span>
+                <span
+                  *ngIf="!question.isSingleChoice"
+                  class="badge badge-secondary text-xs"
+                  title="Multiple choice"
+                >
+                  Multiple choice
+                </span>
+
+                <button
+                  *ngIf="hasConcern(question) && isArchrUser()"
+                  class="badge badge-warning text-xs cursor-pointer"
+                  (click)="showConcernDetails(question)"
+                  title="Show Concern Details"
+                >
+                  Concern Raised <b>({{ getConcernCount(question) }})</b>
+                </button>
+              </div>
+              </div>
+            </div>
+
+            <!-- Button for non-admin users to raise/retract concerns -->
+            <div class="ml-4 flex-shrink-0" *ngIf="!isArchrUser()">
+              <button
+                *ngIf="!hasUserRaisedConcern(question)"
+                (click)="openConcernModal(question)"
+                class="btn btn-sm btn-warning whitespace-nowrap"
+                title="Raise a concern about this question"
+              >
+                <ng-icon name="matErrorRound" size="16"></ng-icon>
+                Raise Concern
+              </button>
+
+              <button
+                *ngIf="hasUserRaisedConcern(question)"
+                (click)="retractConcern(question)"
+                class="btn btn-sm btn-outline btn-error whitespace-nowrap"
+                title="Retract your concern"
+              >
+                <ng-icon name="matErrorRound" size="16"></ng-icon>
+                Concern Raised
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-3 pl-4">
+            <div *ngFor="let option of question.options" class="form-control">
+              <div class="mb-2 flex items-center">
+                <span class="label-text text-base font-medium">
+                  {{ option.optionText }}
+                </span>
+
+                <div
+                  *ngIf="option.definition"
+                  class="tooltip tooltip-right"
+                  [attr.data-tip]="option.definition"
+                >
+                  <ng-icon
+                    name="matHelpOutlineOutline"
+                    size="14"
+                    class="ml-2 mt-2 text-gray-400 cursor-pointer"
+                  ></ng-icon>
+                </div>
+
+                <!-- Source icon for pending AI answers -->
+                <div
+                  *ngIf="hasSource(option)"
+                  class="tooltip tooltip-right before:max-w-md before:text-left before:whitespace-pre-wrap"
+                  [attr.data-tip]="
+                    formatBibtex(getOptionSource(option) || '') || 'No source'
+                  "
+                >
+                  <ng-icon
+                    name="matInfoRound"
+                    size="16"
+                    class="ml-2 mt-2 text-blue-400 cursor-help"
+                  ></ng-icon>
+                </div>
+
+                <div
+                  *ngIf="
+                    getAnswerState(option) !== 'unknown' &&
+                    !hasPendingAIAnswer(option)
+                  "
+                  class="tooltip tooltip-right before:max-w-md before:text-left before:whitespace-pre-wrap"
+                  [attr.data-tip]="
+                    formatBibtex(getAnswerSource(option) || '') || 'No source'
+                  "
+                >
+                  <ng-icon
+                    name="matInfoRound"
+                    size="16"
+                    class="ml-2 mt-2 text-blue-400 cursor-pointer"
+                    (click)="openSourceDialog(option)"
+                  ></ng-icon>
+                </div>
+              </div>
+
+              <!-- Three-state radio buttons for True/False/Unknown with single-choice logic -->
+              <div class="flex gap-4 pl-4 items-center" *ngIf="isArchrUser()">
+                <label
+                  class="label cursor-pointer justify-start gap-2 p-2 rounded-md hover:bg-green-50 transition-colors"
+                  [ngClass]="{
+                    'bg-green-100 ring-1 ring-green-400':
+                      getAnswerState(option) === 'true',
+                    'opacity-70': hasPendingAIAnswer(option),
+                  }"
+                >
+                  <input
+                    type="radio"
+                    [name]="
+                      question.isSingleChoice
+                        ? 'question-' + question.id
+                        : 'option-' + option.id
+                    "
+                    [value]="'true'"
+                    class="radio radio-success radio-sm"
+                    [checked]="
+                      question.isSingleChoice
+                        ? getSelectedOptionId(question) === option.id &&
+                          getAnswerState(option) === 'true'
+                        : getAnswerState(option) === 'true'
+                    "
+                    (change)="setAnswerState(option, 'true', question)"
+                  />
+                  <span class="label-text text-green-700 font-medium"
+                    >True</span
+                  >
+                </label>
+
+                <label
+                  class="label cursor-pointer justify-start gap-2 p-2 rounded-md hover:bg-red-50 transition-colors"
+                  [ngClass]="{
+                    'bg-red-100 ring-1 ring-red-400':
+                      getAnswerState(option) === 'false',
+                    'opacity-70': hasPendingAIAnswer(option),
+                  }"
+                >
+                  <input
+                    type="radio"
+                    [name]="
+                      question.isSingleChoice
+                        ? 'question-' + question.id
+                        : 'option-' + option.id
+                    "
+                    [value]="'false'"
+                    class="radio radio-error radio-sm"
+                    [checked]="
+                      question.isSingleChoice
+                        ? getSelectedOptionId(question) === option.id &&
+                          getAnswerState(option) === 'false'
+                        : getAnswerState(option) === 'false'
+                    "
+                    (change)="setAnswerState(option, 'false', question)"
+                  />
+                  <span class="label-text text-red-700 font-medium">False</span>
+                </label>
+
+                <label
+                  class="label cursor-pointer justify-start gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors"
+                  [ngClass]="{
+                    'bg-gray-100 ring-1 ring-gray-400':
+                      getAnswerState(option) === 'unknown',
+                    'opacity-70': hasPendingAIAnswer(option),
+                  }"
+                >
+                  <input
+                    type="radio"
+                    [name]="
+                      question.isSingleChoice
+                        ? 'question-' + question.id
+                        : 'option-' + option.id
+                    "
+                    [value]="'unknown'"
+                    class="radio radio-sm"
+                    [checked]="
+                      question.isSingleChoice
+                        ? getSelectedOptionId(question) === option.id &&
+                          getAnswerState(option) === 'unknown'
+                        : getAnswerState(option) === 'unknown'
+                    "
+                    (change)="setAnswerState(option, 'unknown', question)"
+                  />
+                  <span class="label-text text-gray-700 font-medium"
+                    >Unknown</span
+                  >
+                </label>
+
+                <button
+                  *ngIf="hasPendingAIAnswer(option)"
+                  (click)="acceptAIAnswer(option)"
+                  class="btn btn-sm bg-gray-400 text-white hover:bg-gray-500 ml-2"
+                >
+                  Accept
+                </button>
+                <button
+                  *ngIf="hasPendingAIAnswer(option)"
+                  (click)="rejectAIAnswer(option)"
+                  class="btn btn-sm btn-outline ml-2"
+                >
+                  Reject
+                </button>
+              </div>
+
+              <div class="pl-4 text-gray-600" *ngIf="!isArchrUser()">
+                <span class="badge badge-outline">
+                  {{
+                    getAnswerState(option) === "true"
+                      ? "True"
+                      : getAnswerState(option) === "false"
+                        ? "False"
+                        : "Unknown"
+                  }}
+                </span>
+              </div>
+
+              <!-- Source Dialog (popup) -->
+              <div
+                *ngIf="showSourceDialog && sourceDialogOption?.id === option.id"
+                class="fixed inset-0 z-50 flex items-center justify-center"
+                style="background: rgba(0, 0, 0, 0.7)"
+              >
+                <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[90vh] flex flex-col">
+                  <h4 class="text-lg font-semibold mb-4 flex-shrink-0">Edit Source</h4>
+                  <div class="overflow-y-auto flex-grow mb-4">
+                    <div
+                      *ngIf="
+                        sourceDialogValue &&
+                        sourceDialogValue.trim().startsWith('@')
+                      "
+                      class="mb-2 text-sm text-gray-600"
+                    >
+                      <b>Preview:</b> {{ formatBibtex(sourceDialogValue) }}
+                    </div>
+                    <div *ngIf="errorMessage" class="mb-2 text-sm text-red-600">
+                      <b>Error:</b> {{ errorMessage }}
+                    </div>
+                    <textarea
+                      class="textarea textarea-bordered w-full"
+                      placeholder="Add source"
+                      [(ngModel)]="sourceDialogValue"
+                    ></textarea>
+                  </div>
+                  <div class="flex justify-end gap-2 flex-shrink-0">
+                    <button
+                      class="btn btn-sm btn-outline"
+                      (click)="closeSourceDialog()"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      class="btn btn-sm btn-primary"
+                      (click)="saveSourceDialog()"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concern Details Modal -->
+    <div *ngIf="concernsForSelectedQuestion.length > 0" class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0, 0, 0, 0.5)">
+        <div class="bg-white p-6 rounded-md shadow-lg w-full max-w-4xl">
+            <h2 class="text-lg font-semibold mb-4">Concern Details</h2>
+            <p class="mb-2">This question has been flagged by the following users:</p>
+            <ul class="list-disc list-inside bg-base-200 p-3 rounded-md">
+                <li *ngFor="let concern of concernsForSelectedQuestion" class="flex items-start justify-between p-2 border-b border-base-300 last:border-b-0">
+                    <div class="flex-1">
+                        <span class="font-medium capitalize">{{ concern.retailUserUsername }}</span>
+                        <p *ngIf="concern.suggestion_text" class="text-sm text-gray-600 mt-1">
+                          <b>Suggestion:</b> <span class="italic">"{{ concern.suggestion_text }}"</span>
+                        </p>
+                    </div>
+                    <button 
+                        *ngIf="isArchrUser()"
+                        class="btn btn-sm btn-outline btn-error ml-2 flex-shrink-0"
+                        (click)="dismissConcern(concern.id)"
+                        title="Dismiss this concern">
+                        Dismiss
+                    </button>
+                </li>
+            </ul>
+            <div class="mt-4 flex justify-end">
+                <button class="btn btn-sm" (click)="closeConcernDetails()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Concern Modal -->
+    <div *ngIf="showConcernModal" class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0, 0, 0, 0.5)">
+        <div class="bg-white p-6 rounded-md shadow-lg w-full max-w-4xl">
+            <h2 class="text-lg font-semibold mb-4">Raise a Concern</h2>
+            <p class="mb-2 text-sm">
+            You can optionally provide a comment or suggest an answer.
+            </p>
+            <textarea
+                class="textarea textarea-bordered w-full mb-4"
+                placeholder="Suggest an answer..."
+                [(ngModel)]="concernSuggestionText"
+            ></textarea>
+            <div class="mt-4 flex justify-end gap-2">
+                <button class="btn btn-sm btn-outline" (click)="closeConcernModal()">
+                  Cancel
+                </button>
+                <button class="btn btn-sm btn-warning" (click)="submitConcern()">
+                  Submit Concern
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prefill Modal -->
+    <div *ngIf="showPrefillModal" class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0, 0, 0, 0.5)">
+        <div class="bg-white p-6 rounded-md shadow-lg w-full max-w-md">
+            <h2 class="text-lg font-semibold mb-4">Prefill from another model</h2>
+            <p class="mb-4 text-sm text-gray-600">
+              Select a model with answered questionnaires to copy answers from:
+            </p>
+            
+            <div *ngIf="availableSourceModels.length === 0" class="alert alert-warning mb-4">
+              <span>No other answered models found in this product line.</span>
+            </div>
+
+            <select
+              *ngIf="availableSourceModels.length > 0"
+              class="select select-bordered w-full mb-4"
+              [(ngModel)]="selectedSourceModelId"
+            >
+              <option *ngFor="let model of availableSourceModels" [value]="model.id">
+                {{ model.name }} (Score: {{ model.overall_score }})
+              </option>
+            </select>
+
+            <div class="mt-6 flex justify-end gap-2">
+                <button 
+                  class="btn btn-sm btn-outline" 
+                  (click)="closePrefillModal()"
+                  [disabled]="isCopyingAnswers">
+                  Cancel
+                </button>
+                <button 
+                  class="btn btn-sm btn-info"
+                  (click)="confirmPrefill()"
+                  [disabled]="!selectedSourceModelId || isCopyingAnswers">
+                  <span
+                    *ngIf="isCopyingAnswers"
+                    class="loading loading-spinner loading-sm"
+                  ></span>
+                  {{ isCopyingAnswers ? "Copying..." : "Prefill" }}
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>

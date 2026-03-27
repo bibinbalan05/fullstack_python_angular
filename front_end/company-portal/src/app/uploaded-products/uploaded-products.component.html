@@ -1,0 +1,69 @@
+<div class="container mx-auto px-4 py-8">
+    <div class="card w-full bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Product Bulk Import</h2>
+            <div class="alert alert-warning" *ngIf="uploadedProducts.length === 0">
+                <ng-icon name="matInfoRound" size="24"></ng-icon>
+                <p>No products detected from csv.</p>
+            </div>
+            <p>
+                {{ uploadedProducts.length }} products identified
+            </p>
+
+            <div class="overflow-x-auto w-full mb-6">
+                <table class="table table-zebra table-sm w-full">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Product Name</th>
+                            <th>EAN</th>
+                            <th>Category</th>
+                            <th>Product Line</th>
+                            <th>Brand</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngIf="uploadedProducts.length === 0">
+                            <td colspan="7">
+                                <p>No products detected from csv.</p>
+                            </td>
+                        </tr>
+                        <tr *ngFor="let product of uploadedProducts" class="hover" [class.warning]="!product.isValid">
+                            <td>
+                                <input type="checkbox" [(ngModel)]="product.isSelected" [disabled]="!product.isValid"
+                                    class="checkbox checkbox-primary checkbox-sm" />
+                            </td>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.ean }}</td>
+                            <td>{{ product.productCategory.label }}</td>
+                            <td>{{ product.productLine.label }}</td>
+                            <td>{{ product.brand.label }}</td>
+                            <td>
+                                <span *ngIf="product.isValid" class="badge badge-success badge-sm">
+                                    Valid
+                                </span>
+                                <span *ngIf="!product.isValid" class="badge badge-error badge-sm">
+                                    Missing or incorrect: {{ getMissingFields(product).join(', ') }}                                    
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-actions justify-end">
+                <button class="btn btn-primary" (click)="handleAddToMyProducts()" [disabled]="!hasSelectedProducts()">
+                    Add to my products
+                </button>
+            </div>
+            <div *ngIf="successMessage" class="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-300">
+                {{ successMessage }}
+            </div>
+            <div *ngIf="errorMessage" class="fixed top-5 right-5 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-300">
+                {{ errorMessage }}
+            </div>
+        </div>
+    </div>
+</div>
+
